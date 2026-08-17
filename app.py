@@ -7,7 +7,7 @@ import speech_recognition as sr
 from gtts import gTTS
 from duckduckgo_search import DDGS
 
-# 1. UI Settings (Gemini Mobile Look)
+# 1. UI Settings
 st.set_page_config(page_title="Firstchoice J.A.R.V.I.S.", page_icon="⚡", layout="wide")
 
 # 2. API Setup
@@ -29,19 +29,44 @@ def save_memory(data):
     try:
         with open(MEMORY_FILE, "w") as f: json.dump(data, f)
     except:
-        pass # Cloud पर राइट परमिशन न होने पर क्रैश से बचाएगा
+        pass 
 
-# 4. Sidebar History
+# 4. ⚠️ SMART MODEL SELECTOR (यह आपकी API Key के असली मॉडल्स ढूँढेगा)
+@st.cache_data
+def get_valid_models():
+    valid_models = []
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                # "models/" प्रिफिक्स हटाकर साफ नाम निकालना
+                clean_name = m.name.replace("models/", "")
+                valid_models.append(clean_name)
+    except Exception as e:
+        pass
+    
+    # अगर लिस्ट खाली आए तो ये डिफॉल्ट मॉडल्स रखें
+    if not valid_models:
+        valid_models = ["gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-1.0-pro"]
+    return valid_models
+
+available_models = get_valid_models()
+
+# 5. Sidebar History & Settings
 if "history" not in st.session_state: st.session_state.history = load_memory()
 if "current_id" not in st.session_state: st.session_state.current_id = str(uuid.uuid4())
 
 with st.sidebar:
     st.title("⚡ J.A.R.V.I.S.")
+    
+    # ⚠️ नया मॉडल सिलेक्टर बटन
+    st.subheader("⚙️ AI Engine")
+    selected_model = st.selectbox("लेटेस्ट मॉडल चुनें:", available_models, index=0)
+    
+    st.divider()
     if st.button("➕ नई चैट", use_container_width=True):
         st.session_state.current_id = str(uuid.uuid4())
         st.rerun()
     
-    st.divider()
     st.subheader("📜 हाल ही के (Recent)")
     for cid, data in list(st.session_state.history.items()):
         col1, col2 = st.columns([0.8, 0.2])
@@ -53,16 +78,8 @@ with st.sidebar:
             save_memory(st.session_state.history)
             st.rerun()
 
-# 5. Auto-Model Selector (No 404 Errors)
-best_model = 'gemini-pro' 
-try:
-    models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    if any('1.5' in m for m in models):
-        best_model = next(m for m in models if '1.5' in m)
-except Exception:
-    pass
-
-model = genai.GenerativeModel(best_model)
+# 6. Initialize Model from Dropdown
+model = genai.GenerativeModel(selected_model)
 
 if st.session_state.current_id not in st.session_state.history:
     st.session_state.history[st.session_state.current_id] = {"title": "नया विषय", "messages": []}
@@ -71,12 +88,12 @@ chat_data = st.session_state.history[st.session_state.current_id]
 
 st.title("नमस्ते, Jitendra! चलिए शुरू करें")
 
-# 6. Display Chat History
+# 7. Display Chat History
 for msg in chat_data["messages"]:
     with st.chat_message(msg["role"]): 
         st.markdown(msg["content"])
 
-# 7. BOTTOM CONTROLS (Gemini Replica UI)
+# 8. BOTTOM CONTROLS (Gemini Replica UI)
 col1, col2 = st.columns([0.15, 0.85])
 
 uploaded_file = None
@@ -89,11 +106,10 @@ with col2:
 
 prompt = st.chat_input("Gemini से कहें...")
 
-# 8. FAST IN-MEMORY VOICE PROCESSING
+# 9. FAST IN-MEMORY VOICE PROCESSING
 voice_prompt = None
 if audio_bytes:
     with st.spinner("प्रोसेस कर रहा हूँ..."):
-        # ⚠️ हार्ड डिस्क पर सेव करने के बजाय डायरेक्ट RAM (BytesIO) में प्रोसेस करना (Super Fast & Cloud Ready)
         audio_file = io.BytesIO(audio_bytes)
         r = sr.Recognizer()
         
@@ -122,7 +138,7 @@ if audio_bytes:
 
 final_prompt = prompt if prompt else voice_prompt
 
-# 9. AI RESPONSE GENERATION
+# 10. AI RESPONSE GENERATION
 if final_prompt:
     if len(chat_data["messages"]) == 0:
         chat_data["title"] = final_prompt[:25]
@@ -131,7 +147,7 @@ if final_prompt:
     with st.chat_message("user"): st.markdown(final_prompt)
     
     with st.chat_message("assistant"):
-        with st.spinner("⚡ J.A.R.V.I.S. सोच रहा है..."):
+        with st.spinner(f"⚡ J.A.R.V.I.S. सोच रहा है... (Model: {selected_model})"):
             try:
                 if uploaded_file:
                     img = Image.open(uploaded_file)
@@ -145,4 +161,4 @@ if final_prompt:
                 chat_data["messages"].append({"role": "assistant", "content": response.text})
                 save_memory(st.session_state.history)
             except Exception as e:
-                st.error(f"⚠️ API Error: {e}")
+                st.error(f"⚠️ API Error ({selected_model}): {e}\n\n👉 टिप: कृपया साइडबार से कोई दूसरा मॉडल (Engine) चुनें!")
