@@ -1,20 +1,22 @@
 import streamlit as st
 import google.generativeai as genai
-import uuid, re, json, os
+import uuid, re, json, os, io
 from PIL import Image
 from audio_recorder_streamlit import audio_recorder
 import speech_recognition as sr
+from gtts import gTTS
+from duckduckgo_search import DDGS
 
-# 1. UI Settings
-st.set_page_config(page_title="J.A.R.V.I.S. Pro", page_icon="⚡", layout="wide")
+# 1. UI Settings (Gemini Mobile Look)
+st.set_page_config(page_title="Firstchoice J.A.R.V.I.S.", page_icon="⚡", layout="wide")
 
 # 2. API Setup
 if "GOOGLE_API_KEY" not in st.secrets:
-    st.error("⚠️ API Key missing!")
+    st.error("⚠️ API Key missing! Streamlit Secrets में API Key डालें।")
     st.stop()
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-# 3. Memory Management
+# 3. Cloud Memory Management
 MEMORY_FILE = "jarvis_memory.json"
 def load_memory():
     if os.path.exists(MEMORY_FILE):
@@ -24,9 +26,12 @@ def load_memory():
     return {}
 
 def save_memory(data):
-    with open(MEMORY_FILE, "w") as f: json.dump(data, f)
+    try:
+        with open(MEMORY_FILE, "w") as f: json.dump(data, f)
+    except:
+        pass # Cloud पर राइट परमिशन न होने पर क्रैश से बचाएगा
 
-# 4. Sidebar History 
+# 4. Sidebar History
 if "history" not in st.session_state: st.session_state.history = load_memory()
 if "current_id" not in st.session_state: st.session_state.current_id = str(uuid.uuid4())
 
@@ -48,17 +53,13 @@ with st.sidebar:
             save_memory(st.session_state.history)
             st.rerun()
 
-# 5. AUTO-MODEL SELECTOR (404 Error Fix)
+# 5. Auto-Model Selector (No 404 Errors)
 best_model = 'gemini-pro' 
 try:
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            if '1.5' in m.name:
-                best_model = m.name
-                break
-            elif 'pro' in m.name:
-                best_model = m.name
-except Exception as e:
+    models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    if any('1.5' in m for m in models):
+        best_model = next(m for m in models if '1.5' in m)
+except Exception:
     pass
 
 model = genai.GenerativeModel(best_model)
@@ -75,7 +76,7 @@ for msg in chat_data["messages"]:
     with st.chat_message(msg["role"]): 
         st.markdown(msg["content"])
 
-# 7. BOTTOM CONTROLS
+# 7. BOTTOM CONTROLS (Gemini Replica UI)
 col1, col2 = st.columns([0.15, 0.85])
 
 uploaded_file = None
@@ -88,21 +89,20 @@ with col2:
 
 prompt = st.chat_input("Gemini से कहें...")
 
-# 8. ⚠️ ADVANCED NOISE-CANCELLING VOICE PROCESSING
+# 8. FAST IN-MEMORY VOICE PROCESSING
 voice_prompt = None
 if audio_bytes:
-    with st.spinner("आवाज़ साफ कर रहा हूँ..."):
-        with open("temp.wav", "wb") as f: f.write(audio_bytes)
+    with st.spinner("प्रोसेस कर रहा हूँ..."):
+        # ⚠️ हार्ड डिस्क पर सेव करने के बजाय डायरेक्ट RAM (BytesIO) में प्रोसेस करना (Super Fast & Cloud Ready)
+        audio_file = io.BytesIO(audio_bytes)
         r = sr.Recognizer()
-        with sr.AudioFile("temp.wav") as source:
-            # ⚠️ असली जादू: यह लाइन बैकग्राउंड के शोर को खत्म कर देगी
-            r.adjust_for_ambient_noise(source, duration=0.5)
-            
+        
+        with sr.AudioFile(audio_file) as source:
+            r.adjust_for_ambient_noise(source, duration=0.2)
             try:
                 audio_data = r.record(source)
                 raw_text = r.recognize_google(audio_data, language="hi-IN")
                 
-                # वॉइस करेक्शन 
                 corrections = {
                     "पेप्सी": "हेलो FC", "pepsi": "Hello FC", "टैक्सी": "Hello FC",
                     "hello app": "Hello FC", "हेलो आप": "Hello FC"
@@ -116,13 +116,13 @@ if audio_bytes:
                 voice_prompt = corrected_text
                 st.success(f"🗣️ आपने कहा: {voice_prompt}") 
             except sr.UnknownValueError:
-                st.error("⚠️ आवाज़ समझ नहीं आई। कृपया माइक के पास साफ़ बोलें।")
+                st.error("⚠️ आवाज़ समझ नहीं आई।")
             except Exception as e:
-                st.error("⚠️ ऑडियो प्रोसेस करने में दिक्कत आई।")
+                st.error("⚠️ एरर: कृपया दोबारा कोशिश करें।")
 
 final_prompt = prompt if prompt else voice_prompt
 
-# 9. AI RESPONSE
+# 9. AI RESPONSE GENERATION
 if final_prompt:
     if len(chat_data["messages"]) == 0:
         chat_data["title"] = final_prompt[:25]
@@ -131,7 +131,7 @@ if final_prompt:
     with st.chat_message("user"): st.markdown(final_prompt)
     
     with st.chat_message("assistant"):
-        with st.spinner(f"⚡ J.A.R.V.I.S. सोच रहा है... (Model: {best_model})"):
+        with st.spinner("⚡ J.A.R.V.I.S. सोच रहा है..."):
             try:
                 if uploaded_file:
                     img = Image.open(uploaded_file)
