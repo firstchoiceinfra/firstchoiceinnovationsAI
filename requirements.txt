@@ -4,3 +4,4 @@ Pillow
 audio-recorder-streamlit
 SpeechRecognition
 gTTS
+duckduckgo-search
