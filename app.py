@@ -5,9 +5,12 @@ import re
 import json
 import os
 from PIL import Image
+from audio_recorder_streamlit import audio_recorder
+import speech_recognition as sr
+from gtts import gTTS
 
-# 1. Page Configuration (J.A.R.V.I.S. Level)
-st.set_page_config(page_title="Firstchoice J.A.R.V.I.S.", page_icon="👁️", layout="wide")
+# 1. Page Configuration
+st.set_page_config(page_title="Firstchoice J.A.R.V.I.S.", page_icon="🎙️", layout="wide")
 
 # 2. API Key Setup
 if "GOOGLE_API_KEY" not in st.secrets:
@@ -31,16 +34,15 @@ def save_memory(data):
     with open(MEMORY_FILE, "w") as f:
         json.dump(data, f)
 
-# 4. Sidebar - Advanced UI & Tools
+# 4. Sidebar - Advanced UI
 with st.sidebar:
-    st.title("👁️ Firstchoice J.A.R.V.I.S.")
-    st.success("✅ Engine: SONNET 5 + VISION")
+    st.title("🎙️ J.A.R.V.I.S. Voice")
+    st.success("✅ Engine: SONNET 5 + VISION + VOICE")
     
-    # ⚙️ Advanced Toggles (UI Features)
-    st.markdown("### ⚙️ System Modules")
-    st.checkbox("🧠 Deep Thinking (Active)", value=True, disabled=True)
-    st.checkbox("💾 Permanent Memory (Active)", value=True, disabled=True)
-    web_search = st.checkbox("🌐 Web Search (Beta)", value=False)
+    st.markdown("### ⚙️ Active Modules")
+    st.checkbox("🧠 Deep Thinking", value=True, disabled=True)
+    st.checkbox("💾 Permanent Memory", value=True, disabled=True)
+    st.checkbox("🎙️ Voice Command & Reply", value=True, disabled=True)
     
     st.divider()
     if st.button("➕ New Project / Chat", use_container_width=True):
@@ -49,9 +51,7 @@ with st.sidebar:
         save_memory(st.session_state.history_list)
         st.rerun()
 
-    st.subheader("📁 Saved Projects (Permanent)")
-    
-    # Load history from file if not in session state
+    st.subheader("📁 Saved Projects")
     if "history_list" not in st.session_state:
         st.session_state.history_list = load_memory()
     
@@ -80,8 +80,8 @@ SYSTEM_PROMPT = """
 नियम:
 1. 🧠 डीप थिंकिंग: कोड लिखने से पहले <thinking> और </thinking> टैग्स के अंदर अपनी रणनीति लिखो।
 2. 💻 फ्लॉलेस कोडिंग: सोचने के बाद 100% पूरा और डिप्लॉय करने लायक कोड दो। 
-3. 👁️ विज़न (Vision): अगर यूज़र कोई फोटो अपलोड करे, तो उसे ध्यान से देखो और उसका एनालिसिस या कोड बनाकर दो।
-4. 🎨 इमेज जनरेशन: फोटो मांगने पर: ![Image](https://image.pollinations.ai/prompt/ENGLISH_PROMPT) यूज़ करो।
+3. 👁️ विज़न: फोटो अपलोड होने पर उसे देखकर एनालिसिस या कोड बनाओ।
+4. 🗣️ वॉइस असिस्टेंट: यूज़र अब तुमसे बोलकर बात कर रहा है, इसलिए जवाब दोस्ताना, स्पष्ट और प्राकृतिक (Natural) भाषा में दो।
 """
 
 model = genai.GenerativeModel(
@@ -90,12 +90,16 @@ model = genai.GenerativeModel(
     generation_config=genai.types.GenerationConfig(temperature=0.2) 
 )
 
-# 6. Main UI & File Uploader (नया फीचर)
-st.title("Firstchoice J.A.R.V.I.S. 👁️")
-st.markdown("**सॉफ्टवेयर कमांड दें, कोई फोटो अपलोड करें, या इमेज जनरेट करवाएं।**")
+# 6. Main UI & Voice Input
+st.title("J.A.R.V.I.S. Voice Assistant 🎙️")
+st.markdown("**टाइप करें, फोटो डालें, या माइक बटन दबाकर बोलकर कमांड दें!**")
 
-# 📁 फाइल अपलोडर (विज़न के लिए)
-uploaded_file = st.file_uploader("🖼️ कोई भी लेआउट, डिज़ाइन या कोड का स्क्रीनशॉट अपलोड करें...", type=['png', 'jpg', 'jpeg'])
+col1, col2 = st.columns([1, 1])
+with col1:
+    uploaded_file = st.file_uploader("🖼️ फोटो अपलोड करें (Optional)", type=['png', 'jpg', 'jpeg'])
+with col2:
+    st.markdown("🗣️ **वॉइस कमांड दें:**")
+    audio_bytes = audio_recorder(text="क्लिक करें और बोलें...", recording_color="#e84118", neutral_color="#4cd137", icon_size="2x")
 
 current_messages = st.session_state.history_list[st.session_state.current_chat_id]
 
@@ -106,20 +110,35 @@ for msg in current_messages:
             text = msg["content"]
             thinking_match = re.search(r'<thinking>(.*?)</thinking>', text, re.DOTALL)
             if thinking_match:
-                thinking_text = thinking_match.group(1).strip()
                 final_answer = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL).strip()
-                
-                with st.expander("🌌 J.A.R.V.I.S. Thinking...", expanded=False):
-                    st.markdown(f"*{thinking_text}*")
+                with st.expander("🌌 Thinking Process...", expanded=False):
+                    st.markdown(f"*{thinking_match.group(1).strip()}*")
                 st.markdown(final_answer)
             else:
                 st.markdown(text)
         else:
             st.markdown(msg["content"])
 
-# 7. Chat Input & Processing
-if prompt := st.chat_input("कमांड दें..."):
-    # यूज़र का मैसेज सेव करना
+# 7. Voice to Text & Text Input Logic
+prompt = st.chat_input("या यहाँ टाइप करके कमांड दें...")
+
+# अगर यूज़र ने माइक में कुछ बोला है
+if audio_bytes:
+    with st.spinner("विशलेषण कर रहा हूँ..."):
+        with open("temp_audio.wav", "wb") as f:
+            f.write(audio_bytes)
+        r = sr.Recognizer()
+        with sr.AudioFile("temp_audio.wav") as source:
+            audio_data = r.record(source)
+            try:
+                # हिंदी/इंग्लिश मिक्स आवाज़ को समझना
+                prompt = r.recognize_google(audio_data, language="hi-IN")
+                st.success(f"🗣️ आपने कहा: {prompt}")
+            except:
+                st.error("माफ़ करें, आवाज़ साफ़ नहीं आई। कृपया दोबारा बोलें।")
+
+# 8. AI Processing & Text-to-Speech Output
+if prompt:
     current_messages.append({"role": "user", "content": prompt})
     save_memory(st.session_state.history_list)
     
@@ -127,33 +146,37 @@ if prompt := st.chat_input("कमांड दें..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("🌌 Processing All-in-One Command..."):
+        with st.spinner("🌌 J.A.R.V.I.S. is processing..."):
             try:
-                # 🖼️ अगर फोटो अपलोड की गई है, तो फोटो और टेक्स्ट दोनों साथ में भेजना
                 if uploaded_file is not None:
                     img = Image.open(uploaded_file)
                     response = model.generate_content([prompt, img])
                 else:
-                    # सिर्फ टेक्स्ट है, तो नॉर्मल चैट
                     gemini_history = [{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]
                     chat_session = model.start_chat(history=gemini_history)
                     response = chat_session.send_message(prompt)
                 
                 response_text = response.text
                 
-                # Thinking Box UI
+                # UI Display Logic
                 thinking_match = re.search(r'<thinking>(.*?)</thinking>', response_text, re.DOTALL)
+                final_answer = response_text
                 if thinking_match:
-                    thinking_text = thinking_match.group(1).strip()
                     final_answer = re.sub(r'<thinking>.*?</thinking>', '', response_text, flags=re.DOTALL).strip()
-                    
-                    with st.expander("🌌 J.A.R.V.I.S. Thinking...", expanded=False):
-                        st.markdown(f"*{thinking_text}*")
-                    st.markdown(final_answer)
-                else:
-                    st.markdown(response_text)
-                    
-                # AI का जवाब सेव करना
+                    with st.expander("🌌 Thinking Process...", expanded=False):
+                        st.markdown(f"*{thinking_match.group(1).strip()}*")
+                st.markdown(final_answer)
+                
+                # 🔊 TEXT TO SPEECH LOGIC (आवाज़ में जवाब देना)
+                # हम कोड ब्लॉक और फालतू निशानों को हटा देते हैं ताकि AI कोड को पढ़ने में समय बर्बाद न करे
+                clean_text_for_voice = re.sub(r'```.*?```', 'मैंने कोड स्क्रीन पर जनरेट कर दिया है।', final_answer, flags=re.DOTALL)
+                clean_text_for_voice = re.sub(r'[*#_]', '', clean_text_for_voice)
+                
+                if clean_text_for_voice.strip():
+                    tts = gTTS(text=clean_text_for_voice, lang='hi')
+                    tts.save("reply.mp3")
+                    st.audio("reply.mp3", format="audio/mp3", autoplay=True)
+                
                 current_messages.append({"role": "assistant", "content": response_text})
                 save_memory(st.session_state.history_list)
                 
