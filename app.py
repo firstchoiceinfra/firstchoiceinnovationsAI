@@ -14,7 +14,7 @@ genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 # 3. Sidebar - History & Tools
 with st.sidebar:
     st.title("🚀 Firstchoice Master AI")
-    st.success("✅ System: Limitless & Error-Free")
+    st.success("✅ System: Gemini 3.6 Flash (Limitless)")
     st.caption("All-in-One: Coding, Images, Search & Logic")
     
     if st.button("➕ New Project / Chat", use_container_width=True):
@@ -67,12 +67,12 @@ SYSTEM_PROMPT = """
    - यूज़र जिस भाषा (हिंदी, मराठी या इंग्लिश) में कमांड दे, तुम्हें उसी भाषा में बात करनी है।
 """
 
-# हम gemini-1.5-flash इस्तेमाल कर रहे हैं ताकि फ्री टियर में 429 कोटा एरर न आए और स्पीड सबसे तेज़ रहे।
+# यहाँ हमने सही और लेटेस्ट वर्ज़न (gemini-3.6-flash) डाला है, जिससे 404 एरर नहीं आएगा।
 model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
+    model_name='gemini-3.6-flash',
     system_instruction=SYSTEM_PROMPT,
     generation_config=genai.types.GenerationConfig(
-        temperature=0.3, # 0.3 रखने से यह कोडिंग में बिल्कुल लॉजिकल रहेगा और गलतियां नहीं करेगा
+        temperature=0.3, 
     ) 
 )
 
@@ -87,7 +87,7 @@ for msg in current_messages:
         st.markdown(msg["content"])
 
 # 6. Chat Input & Processing
-if prompt := st.chat_input("सॉफ्टवेयर बनाने का कमांड दें या कुछ भी पूछें..."):
+if prompt := st.chat_input("सॉफ्टवेयर बनाने का कमांड दें, इमेज मांगें या कुछ भी पूछें..."):
     current_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
