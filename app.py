@@ -64,7 +64,7 @@ generation_config = genai.types.GenerationConfig(
 )
 
 model = genai.GenerativeModel(
-    model_name='gemini-1.5-pro',
+    model_name='gemini-pro',
     system_instruction=SYSTEM_PROMPT,
     generation_config=generation_config
 )
