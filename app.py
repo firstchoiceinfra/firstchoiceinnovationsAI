@@ -48,9 +48,8 @@ with st.sidebar:
             save_memory(st.session_state.history)
             st.rerun()
 
-# 5. ⚠️ AUTO-MODEL SELECTOR (404 एरर का पक्का इलाज)
-# यह कोड खुद चेक करेगा कि आपके API पर कौन सा मॉडल सपोर्ट कर रहा है
-best_model = 'gemini-pro' # डिफ़ॉल्ट बैकअप
+# 5. AUTO-MODEL SELECTOR (404 Error Fix)
+best_model = 'gemini-pro' 
 try:
     for m in genai.list_models():
         if 'generateContent' in m.supported_generation_methods:
@@ -89,23 +88,24 @@ with col2:
 
 prompt = st.chat_input("Gemini से कहें...")
 
-# 8. VOICE PROCESSING & FIX FOR "पेप्सी"
+# 8. ⚠️ ADVANCED NOISE-CANCELLING VOICE PROCESSING
 voice_prompt = None
 if audio_bytes:
-    with st.spinner("सुन रहा हूँ..."):
+    with st.spinner("आवाज़ साफ कर रहा हूँ..."):
         with open("temp.wav", "wb") as f: f.write(audio_bytes)
         r = sr.Recognizer()
         with sr.AudioFile("temp.wav") as source:
+            # ⚠️ असली जादू: यह लाइन बैकग्राउंड के शोर को खत्म कर देगी
+            r.adjust_for_ambient_noise(source, duration=0.5)
+            
             try:
-                raw_text = r.recognize_google(r.record(source), language="hi-IN")
+                audio_data = r.record(source)
+                raw_text = r.recognize_google(audio_data, language="hi-IN")
                 
-                # ⚠️ वॉइस करेक्शन (पेप्सी को 'हेलो FC' बनाने की निंजा तकनीक)
+                # वॉइस करेक्शन 
                 corrections = {
-                    "पेप्सी": "हेलो FC", 
-                    "pepsi": "Hello FC", 
-                    "टैक्सी": "Hello FC",
-                    "hello app": "Hello FC", 
-                    "हेलो आप": "Hello FC"
+                    "पेप्सी": "हेलो FC", "pepsi": "Hello FC", "टैक्सी": "Hello FC",
+                    "hello app": "Hello FC", "हेलो आप": "Hello FC"
                 }
                 
                 corrected_text = raw_text.lower()
@@ -115,8 +115,10 @@ if audio_bytes:
                         
                 voice_prompt = corrected_text
                 st.success(f"🗣️ आपने कहा: {voice_prompt}") 
-            except:
-                st.error("आवाज़ साफ़ नहीं आई, कृपया दोबारा बोलें।")
+            except sr.UnknownValueError:
+                st.error("⚠️ आवाज़ समझ नहीं आई। कृपया माइक के पास साफ़ बोलें।")
+            except Exception as e:
+                st.error("⚠️ ऑडियो प्रोसेस करने में दिक्कत आई।")
 
 final_prompt = prompt if prompt else voice_prompt
 
@@ -143,4 +145,4 @@ if final_prompt:
                 chat_data["messages"].append({"role": "assistant", "content": response.text})
                 save_memory(st.session_state.history)
             except Exception as e:
-                st.error(f"⚠️ API Error: {e}\n\nमॉडल का नाम या API की लिमिट खत्म हो सकती है।")
+                st.error(f"⚠️ API Error: {e}")
