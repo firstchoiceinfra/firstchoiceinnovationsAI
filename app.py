@@ -8,9 +8,10 @@ from PIL import Image
 from audio_recorder_streamlit import audio_recorder
 import speech_recognition as sr
 from gtts import gTTS
+from duckduckgo_search import DDGS # 🌐 लाइव इंटरनेट के लिए नया इंजन
 
 # 1. Page Configuration
-st.set_page_config(page_title="Firstchoice J.A.R.V.I.S.", page_icon="🎙️", layout="wide")
+st.set_page_config(page_title="Global J.A.R.V.I.S.", page_icon="🌍", layout="wide")
 
 # 2. API Key Setup
 if "GOOGLE_API_KEY" not in st.secrets:
@@ -34,15 +35,28 @@ def save_memory(data):
     with open(MEMORY_FILE, "w") as f:
         json.dump(data, f)
 
-# 4. Sidebar - Advanced UI
+# 🌐 4. Live Internet Search Function (दुनिया की जानकारी के लिए)
+def get_live_information(query):
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=3))
+            if results:
+                info = "\n".join([f"- {r['title']}: {r['body']}" for r in results])
+                return info
+    except:
+        return None
+    return None
+
+# 5. Sidebar - Advanced UI
 with st.sidebar:
-    st.title("🎙️ J.A.R.V.I.S. Voice")
-    st.success("✅ Engine: SONNET 5 + VISION + VOICE")
+    st.title("🌍 J.A.R.V.I.S. Global")
+    st.success("✅ Engine: SONNET 5 + WEB SEARCH")
     
-    st.markdown("### ⚙️ Active Modules")
+    st.markdown("### ⚙️ System Status")
     st.checkbox("🧠 Deep Thinking", value=True, disabled=True)
     st.checkbox("💾 Permanent Memory", value=True, disabled=True)
-    st.checkbox("🎙️ Voice Command & Reply", value=True, disabled=True)
+    st.checkbox("🎙️ Voice Active", value=True, disabled=True)
+    st.checkbox("🌍 Live Internet", value=True, disabled=True) # नया इंटरनेट फीचर
     
     st.divider()
     if st.button("➕ New Project / Chat", use_container_width=True):
@@ -72,27 +86,28 @@ if "current_chat_id" not in st.session_state or st.session_state.current_chat_id
     st.session_state.history_list[st.session_state.current_chat_id] = []
     save_memory(st.session_state.history_list)
 
-# 5. 🌌 THE MASTER SYSTEM PROMPT
+# 6. 🌌 THE MASTER SYSTEM PROMPT
 SYSTEM_PROMPT = """
-तुम 'Firstchoice J.A.R.V.I.S.' हो। तुम्हारी बुद्धिमत्ता 'Sonnet 5' के स्तर की है। 
-तुम्हें PropertyHub और फर्स्टचॉइस इन्फ्रा के लिए विज़नरी सॉफ्टवेयर बनाना है।
+तुम 'Firstchoice J.A.R.V.I.S.' हो। तुम एक ग्लोबल AI हो जिसकी पहुंच पूरी दुनिया के इंटरनेट और ज्ञान तक है।
+तुम्हारे पास PropertyHub के डेवलपमेंट की नॉलेज भी है और दुनिया की हर जानकारी भी।
 
 नियम:
-1. 🧠 डीप थिंकिंग: कोड लिखने से पहले <thinking> और </thinking> टैग्स के अंदर अपनी रणनीति लिखो।
-2. 💻 फ्लॉलेस कोडिंग: सोचने के बाद 100% पूरा और डिप्लॉय करने लायक कोड दो। 
-3. 👁️ विज़न: फोटो अपलोड होने पर उसे देखकर एनालिसिस या कोड बनाओ।
-4. 🗣️ वॉइस असिस्टेंट: यूज़र अब तुमसे बोलकर बात कर रहा है, इसलिए जवाब दोस्ताना, स्पष्ट और प्राकृतिक (Natural) भाषा में दो।
+1. 🌍 पल-भर में जवाब: दुनिया की कोई भी जानकारी पूछी जाए (जैसे आज का मौसम, ताज़ा खबर, इतिहास या साइंस), सीधा और सटीक जवाब दो।
+2. 🧠 डीप थिंकिंग: मुश्किल सवालों या कोडिंग से पहले <thinking> और </thinking> टैग्स में अपना लॉजिक लिखो।
+3. 💻 फ्लॉलेस कोडिंग: बिना एरर के पूरा कोड दो।
+4. 🗣️ वॉइस मोड: तुम बोलकर जवाब दे रहे हो, इसलिए जवाब नेचुरल और इंसान जैसा दो (ताकि सुनने में अच्छा लगे)।
+5. 🎨 इमेज: फोटो मांगे जाने पर हमेशा ![Image](https://image.pollinations.ai/prompt/ENGLISH_PROMPT) यूज़ करो।
 """
 
 model = genai.GenerativeModel(
     model_name='gemini-1.5-flash',
     system_instruction=SYSTEM_PROMPT,
-    generation_config=genai.types.GenerationConfig(temperature=0.2) 
+    generation_config=genai.types.GenerationConfig(temperature=0.3) 
 )
 
-# 6. Main UI & Voice Input
-st.title("J.A.R.V.I.S. Voice Assistant 🎙️")
-st.markdown("**टाइप करें, फोटो डालें, या माइक बटन दबाकर बोलकर कमांड दें!**")
+# 7. Main UI & Inputs
+st.title("J.A.R.V.I.S. Global Intelligence 🌍")
+st.markdown("**दुनिया का कोई भी सवाल पूछें, कोडिंग करवाएं, या आवाज़ से कमांड दें!**")
 
 col1, col2 = st.columns([1, 1])
 with col1:
@@ -103,7 +118,7 @@ with col2:
 
 current_messages = st.session_state.history_list[st.session_state.current_chat_id]
 
-# Display Messages
+# Display Previous Messages
 for msg in current_messages:
     with st.chat_message(msg["role"]):
         if msg["role"] == "assistant":
@@ -119,25 +134,24 @@ for msg in current_messages:
         else:
             st.markdown(msg["content"])
 
-# 7. Voice to Text & Text Input Logic
-prompt = st.chat_input("या यहाँ टाइप करके कमांड दें...")
+# 8. Text Input Logic
+prompt = st.chat_input("दुनिया का कोई भी सवाल यहाँ टाइप करें...")
 
-# अगर यूज़र ने माइक में कुछ बोला है
+# Voice Input Logic
 if audio_bytes:
-    with st.spinner("विशलेषण कर रहा हूँ..."):
+    with st.spinner("आवाज़ समझ रहा हूँ..."):
         with open("temp_audio.wav", "wb") as f:
             f.write(audio_bytes)
         r = sr.Recognizer()
         with sr.AudioFile("temp_audio.wav") as source:
             audio_data = r.record(source)
             try:
-                # हिंदी/इंग्लिश मिक्स आवाज़ को समझना
                 prompt = r.recognize_google(audio_data, language="hi-IN")
                 st.success(f"🗣️ आपने कहा: {prompt}")
             except:
                 st.error("माफ़ करें, आवाज़ साफ़ नहीं आई। कृपया दोबारा बोलें।")
 
-# 8. AI Processing & Text-to-Speech Output
+# 9. AI Processing, Internet Search & Voice Output
 if prompt:
     current_messages.append({"role": "user", "content": prompt})
     save_memory(st.session_state.history_list)
@@ -146,19 +160,29 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("🌌 J.A.R.V.I.S. is processing..."):
+        with st.spinner("🌍 पूरी दुनिया से जानकारी खोज रहा हूँ..."):
             try:
+                # 🌐 लाइव इंटरनेट सर्च (अगर ज़रूरत हो तो)
+                live_data = get_live_information(prompt)
+                
+                # प्रॉम्प्ट को एडवांस बनाना
+                final_prompt = prompt
+                if live_data:
+                    final_prompt = f"यूज़र का सवाल: {prompt}\n\nलाइव इंटरनेट डेटा:\n{live_data}\n\nइस ताज़ा इंटरनेट डेटा का इस्तेमाल करके यूज़र को सबसे सटीक जवाब दो।"
+
+                # विज़न (फोटो) के साथ प्रॉसेसिंग
                 if uploaded_file is not None:
                     img = Image.open(uploaded_file)
-                    response = model.generate_content([prompt, img])
+                    response = model.generate_content([final_prompt, img])
                 else:
+                    # नॉर्मल चैट
                     gemini_history = [{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]
                     chat_session = model.start_chat(history=gemini_history)
-                    response = chat_session.send_message(prompt)
+                    response = chat_session.send_message(final_prompt)
                 
                 response_text = response.text
                 
-                # UI Display Logic
+                # UI Display
                 thinking_match = re.search(r'<thinking>(.*?)</thinking>', response_text, re.DOTALL)
                 final_answer = response_text
                 if thinking_match:
@@ -167,9 +191,8 @@ if prompt:
                         st.markdown(f"*{thinking_match.group(1).strip()}*")
                 st.markdown(final_answer)
                 
-                # 🔊 TEXT TO SPEECH LOGIC (आवाज़ में जवाब देना)
-                # हम कोड ब्लॉक और फालतू निशानों को हटा देते हैं ताकि AI कोड को पढ़ने में समय बर्बाद न करे
-                clean_text_for_voice = re.sub(r'```.*?```', 'मैंने कोड स्क्रीन पर जनरेट कर दिया है।', final_answer, flags=re.DOTALL)
+                # 🔊 TEXT TO SPEECH (आवाज़ में जवाब)
+                clean_text_for_voice = re.sub(r'```.*?```', 'मैंने कोड और विस्तृत जानकारी स्क्रीन पर जनरेट कर दी है।', final_answer, flags=re.DOTALL)
                 clean_text_for_voice = re.sub(r'[*#_]', '', clean_text_for_voice)
                 
                 if clean_text_for_voice.strip():
@@ -177,6 +200,7 @@ if prompt:
                     tts.save("reply.mp3")
                     st.audio("reply.mp3", format="audio/mp3", autoplay=True)
                 
+                # असली जवाब को हिस्ट्री में सेव करना (बिना सर्च डेटा मिलावट के)
                 current_messages.append({"role": "assistant", "content": response_text})
                 save_memory(st.session_state.history_list)
                 
