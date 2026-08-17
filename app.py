@@ -14,7 +14,7 @@ genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 # 3. Sidebar: History Management
 with st.sidebar:
     st.title("⚡ Firstchoice AI")
-    st.success("✅ Connected: Gemini 3.1 Pro")
+    st.success("✅ Connected: gemini-1.5-flash")
     st.caption("Expert Software Engineering Edition")
     
     if st.button("➕ New Chat", use_container_width=True):
