@@ -4,218 +4,221 @@ import uuid
 import re
 import json
 import os
-import pandas as pd
 from PIL import Image
 from audio_recorder_streamlit import audio_recorder
 import speech_recognition as sr
 from gtts import gTTS
-from duckduckgo_search import DDGS
-from fpdf import FPDF
+from duckduckgo_search import DDGS 
 
-# 1. Page Config
-st.set_page_config(page_title="Firstchoice HQ", page_icon="🏢", layout="wide")
+# 1. Page Configuration
+st.set_page_config(page_title="Global J.A.R.V.I.S.", page_icon="🌍", layout="wide")
 
-# 2. 🔒 SECURITY SYSTEM (मास्टर पासवर्ड)
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.title("🔒 Firstchoice Security Protocol")
-    st.markdown("सिस्टम एक्सेस करने के लिए मास्टर पासवर्ड दर्ज करें।")
-    pwd = st.text_input("Password", type="password")
-    if st.button("Unlock J.A.R.V.I.S."):
-        if pwd == "FC2026":  # आप इसे बाद में बदल सकते हैं
-            st.session_state.authenticated = True
-            st.rerun()
-        else:
-            st.error("❌ Access Denied!")
-    st.stop() # जब तक पासवर्ड नहीं डलेगा, ऐप आगे नहीं बढ़ेगा
-
-# 3. API & Memory Setup
+# 2. API Key Setup
 if "GOOGLE_API_KEY" not in st.secrets:
     st.error("⚠️ API Key नहीं मिली! कृपया Streamlit Secrets में सेट करें।")
     st.stop()
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
+# 3. 🧠 Permanent Memory System (लोकल डेटाबेस)
 MEMORY_FILE = "firstchoice_memory.json"
+
 def load_memory():
     if os.path.exists(MEMORY_FILE):
         try:
-            with open(MEMORY_FILE, "r") as f: return json.load(f)
-        except: return {}
+            with open(MEMORY_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
     return {}
-def save_memory(data):
-    with open(MEMORY_FILE, "w") as f: json.dump(data, f)
 
+def save_memory(data):
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(data, f)
+
+# 🌐 4. Live Internet Search Function
 def get_live_information(query):
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=3))
-            if results: return "\n".join([f"- {r['title']}: {r['body']}" for r in results])
-    except: return None
+            if results:
+                info = "\n".join([f"- {r['title']}: {r['body']}" for r in results])
+                return info
+    except:
+        return None
     return None
 
-# 4. Sidebar Setup
+# 5. Sidebar - Advanced UI
 with st.sidebar:
-    st.title("🏢 Firstchoice HQ")
-    st.success("✅ Logged in securely")
-    if st.button("➕ New J.A.R.V.I.S. Chat", use_container_width=True):
+    st.title("🌍 J.A.R.V.I.S. Global")
+    st.success("✅ Engine: SONNET 5 + WEB SEARCH")
+    
+    st.markdown("### ⚙️ System Status")
+    st.checkbox("🧠 Deep Thinking", value=True, disabled=True)
+    st.checkbox("💾 Permanent Memory", value=True, disabled=True)
+    st.checkbox("🎙️ Wake Word: 'Hello FC'", value=True, disabled=True) 
+    st.checkbox("🌍 Live Internet", value=True, disabled=True) 
+    
+    st.divider()
+    if st.button("➕ New Project / Chat", use_container_width=True):
         st.session_state.current_chat_id = str(uuid.uuid4())
-        if "history_list" in st.session_state:
-            st.session_state.history_list[st.session_state.current_chat_id] = []
-            save_memory(st.session_state.history_list)
+        st.session_state.history_list[st.session_state.current_chat_id] = []
+        save_memory(st.session_state.history_list)
         st.rerun()
 
-if "history_list" not in st.session_state:
-    st.session_state.history_list = load_memory()
+    st.subheader("📁 Saved Projects")
+    if "history_list" not in st.session_state:
+        st.session_state.history_list = load_memory()
+    
+    for chat_id, messages in list(st.session_state.history_list.items()):
+        col1, col2 = st.columns([0.8, 0.2])
+        if col1.button(f"Chat {chat_id[:4]}", key=f"btn_{chat_id}"):
+            st.session_state.current_chat_id = chat_id
+            st.rerun()
+        if col2.button("🗑️", key=f"del_{chat_id}"):
+            del st.session_state.history_list[chat_id]
+            save_memory(st.session_state.history_list)
+            if st.session_state.current_chat_id == chat_id:
+                st.session_state.current_chat_id = None
+            st.rerun()
+
 if "current_chat_id" not in st.session_state or st.session_state.current_chat_id is None:
     st.session_state.current_chat_id = str(uuid.uuid4())
     st.session_state.history_list[st.session_state.current_chat_id] = []
     save_memory(st.session_state.history_list)
 
-SYSTEM_PROMPT = """तुम 'Firstchoice J.A.R.V.I.S.' हो। तुम एक हाई-लेवल AI हो।
-नियम: 
-1. सीधा और सटीक जवाब दो।
-2. <thinking> टैग्स में अपना लॉजिक लिखो।
-3. यूज़र वॉयस से बात करे तो नेचुरल जवाब दो।"""
+# 6. 🌌 THE MASTER SYSTEM PROMPT
+SYSTEM_PROMPT = """
+तुम 'Firstchoice J.A.R.V.I.S.' हो। तुम एक ग्लोबल AI हो जिसकी पहुंच पूरी दुनिया के इंटरनेट और ज्ञान तक है।
+तुम्हारे पास PropertyHub के डेवलपमेंट की नॉलेज भी है और दुनिया की हर जानकारी भी।
 
-model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT, generation_config=genai.types.GenerationConfig(temperature=0.2))
+नियम:
+1. 🌍 पल-भर में जवाब: दुनिया की कोई जानकारी पूछी जाए, सीधा और सटीक जवाब दो।
+2. 🧠 डीप थिंकिंग: मुश्किल सवालों या कोडिंग से पहले <thinking> और </thinking> टैग्स में अपना लॉजिक लिखो।
+3. 💻 फ्लॉलेस कोडिंग: बिना एरर के पूरा कोड दो।
+4. 🗣️ वॉइस मोड: तुम बोलकर जवाब दे रहे हो, इसलिए जवाब नेचुरल और इंसान जैसा दो (ताकि सुनने में अच्छा लगे)।
+5. 🎨 इमेज: फोटो मांगे जाने पर हमेशा ![Image](https://image.pollinations.ai/prompt/ENGLISH_PROMPT) यूज़ करो।
+"""
 
-# 5. 🗂️ MAIN DASHBOARD TABS
-tab1, tab2, tab3 = st.tabs(["🎙️ J.A.R.V.I.S. AI", "📊 CRM & Dashboard", "📄 Auto Document Creator"])
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    system_instruction=SYSTEM_PROMPT,
+    generation_config=genai.types.GenerationConfig(temperature=0.3) 
+)
 
-# --- TAB 1: J.A.R.V.I.S. AI (चैट, वॉइस, इंटरनेट, विज़न) ---
-with tab1:
-    st.title("J.A.R.V.I.S. AI Core 🧠")
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        uploaded_file = st.file_uploader("🖼️ फोटो अपलोड करें", type=['png', 'jpg', 'jpeg'])
-    with col2:
-        st.markdown("🗣️ **'Hello FC' बोलकर कमांड दें:**")
-        audio_bytes = audio_recorder(text="क्लिक करें...", recording_color="#e84118", neutral_color="#4cd137")
+# 7. Main UI & Inputs
+st.title("J.A.R.V.I.S. Global Intelligence 🌍")
+st.markdown("**🗣️ 'Hello FC' बोलकर कमांड दें (जैसे: 'Hello FC, आज का मौसम बताओ')**")
 
-    current_messages = st.session_state.history_list[st.session_state.current_chat_id]
-    for msg in current_messages:
-        with st.chat_message(msg["role"]):
-            if msg["role"] == "assistant":
-                text = msg["content"]
-                tm = re.search(r'<thinking>(.*?)</thinking>', text, re.DOTALL)
-                if tm:
-                    final_ans = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL).strip()
-                    with st.expander("🌌 Thinking...", expanded=False): st.markdown(f"*{tm.group(1).strip()}*")
-                    st.markdown(final_ans)
-                else: st.markdown(text)
-            else: st.markdown(msg["content"])
+col1, col2 = st.columns([1, 1])
+with col1:
+    uploaded_file = st.file_uploader("🖼️ फोटो अपलोड करें", type=['png', 'jpg', 'jpeg'])
+with col2:
+    st.markdown("🗣️ **माइक पर क्लिक करें:**")
+    audio_bytes = audio_recorder(text="क्लिक करें और बोलें...", recording_color="#e84118", neutral_color="#4cd137", icon_size="2x")
 
-    prompt = st.chat_input("कमांड टाइप करें...")
-    
-    if audio_bytes:
-        with st.spinner("Processing Voice..."):
-            with open("temp.wav", "wb") as f: f.write(audio_bytes)
-            r = sr.Recognizer()
-            with sr.AudioFile("temp.wav") as source:
-                try:
-                    raw_text = r.recognize_google(r.record(source), language="hi-IN").lower()
-                    wake_words = ["hello fc", "हेलो एफसी", "hello f c", "हेलो fc"]
-                    is_wake = any(ww in raw_text for ww in wake_words)
-                    if is_wake:
-                        for ww in wake_words: raw_text = raw_text.replace(ww, "").strip()
-                        prompt = raw_text if raw_text else "जी बॉस, बताइए?"
-                        st.success(f"🗣️ Wake Word Detected: {prompt}")
-                    else: st.warning("⚠️ कमांड इग्नोर की गई। 'Hello FC' बोलें।")
-                except: st.error("आवाज़ साफ़ नहीं आई।")
+current_messages = st.session_state.history_list[st.session_state.current_chat_id]
 
-    if prompt:
-        current_messages.append({"role": "user", "content": prompt})
-        save_memory(st.session_state.history_list)
-        with st.chat_message("user"): st.markdown(prompt)
-        with st.chat_message("assistant"):
-            with st.spinner("🌍 Processing..."):
-                try:
-                    live_data = get_live_information(prompt)
-                    final_prompt = f"Live Data:\n{live_data}\n\nQuery: {prompt}" if live_data else prompt
-                    if uploaded_file:
-                        response = model.generate_content([final_prompt, Image.open(uploaded_file)])
-                    else:
-                        response = model.start_chat(history=[{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]).send_message(final_prompt)
-                    
-                    tm = re.search(r'<thinking>(.*?)</thinking>', response.text, re.DOTALL)
-                    final_ans = re.sub(r'<thinking>.*?</thinking>', '', response.text, flags=re.DOTALL).strip()
-                    if tm:
-                        with st.expander("🌌 Thinking...", expanded=False): st.markdown(f"*{tm.group(1).strip()}*")
-                    st.markdown(final_ans)
-                    
-                    clean_voice = re.sub(r'```.*?```', 'जानकारी स्क्रीन पर है।', final_ans, flags=re.DOTALL)
-                    clean_voice = re.sub(r'[*#_]', '', clean_voice)
-                    if clean_voice.strip():
-                        tts = gTTS(text=clean_text_for_voice, lang='hi')
-                        tts.save("reply.mp3")
-                        st.audio("reply.mp3", format="audio/mp3", autoplay=True)
-                    
-                    current_messages.append({"role": "assistant", "content": response.text})
-                    save_memory(st.session_state.history_list)
-                except Exception as e: st.error(f"⚠️ एरर: {e}")
-
-# --- TAB 2: CRM & DASHBOARD ---
-with tab2:
-    st.title("📊 Firstchoice CRM Dashboard")
-    st.markdown("आपके सभी लोकल एस्टेट प्रोजेक्ट्स का लाइव स्टेटस।")
-    
-    # 📝 CRM Data Table
-    crm_data = pd.DataFrame({
-        "Project Name": ["City-1", "City-2 (Mohadi)", "Sai Samruddhi (City-3)", "City-4", "PropertyHub Platform"],
-        "Status": ["Active", "Plotting Phase", "Layout Design", "Initial Planning", "Development"],
-        "Total Plots/Vendors": [45, 120, 85, 0, 15],
-        "Booked/Active": [38, 12, 40, 0, 5]
-    })
-    
-    st.dataframe(crm_data, use_container_width=True)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info("💡 **Quick Action:** J.A.R.V.I.S. को कमांड दें: 'Mohadi प्रोजेक्ट का लेटेस्ट स्टेटस बताओ'")
-    with col2:
-        st.success("📈 **PropertyHub:** 5 Active Vendors Onboarded")
-
-# --- TAB 3: AUTO PDF GENERATOR ---
-with tab3:
-    st.title("📄 Auto Document & Agreement Creator")
-    st.markdown("सेकंडों में वेंडर एग्रीमेंट या इनवॉइस तैयार करें।")
-    
-    client_name = st.text_input("वेंडर / क्लाइंट का नाम")
-    deal_amount = st.text_input("डील की रकम (Rs.)")
-    project_select = st.selectbox("प्रोजेक्ट चुनें", ["City-1", "City-2 Mohadi", "Sai Samruddhi City-3", "City-4", "PropertyHub"])
-    
-    if st.button("Generate PDF Agreement"):
-        if client_name and deal_amount:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(200, 10, txt="FIRSTCHOICE INFRA - OFFICIAL AGREEMENT", ln=True, align='C')
-            pdf.set_font("Arial", size=12)
-            pdf.cell(200, 10, txt="---------------------------------------------------------", ln=True, align='C')
-            
-            agreement_text = f"""
-This agreement is made for the project: {project_select}.
-            
-Client/Vendor Name: {client_name}
-Total Deal Amount: Rs. {deal_amount}/-
-            
-Authorized Signatory: Jitendra Govindrao Parate
-Firm: Firstchoice Infra
-            """
-            pdf.multi_cell(0, 10, txt=agreement_text)
-            
-            pdf_file_name = f"Agreement_{client_name.replace(' ', '_')}.pdf"
-            pdf.output(pdf_file_name)
-            
-            with open(pdf_file_name, "rb") as file:
-                btn = st.download_button(
-                    label="⬇️ Download PDF Agreement",
-                    data=file,
-                    file_name=pdf_file_name,
-                    mime="application/pdf"
-                )
-            st.success("✅ PDF जनरेट हो गया!")
+# Display Previous Messages
+for msg in current_messages:
+    with st.chat_message(msg["role"]):
+        if msg["role"] == "assistant":
+            text = msg["content"]
+            thinking_match = re.search(r'<thinking>(.*?)</thinking>', text, re.DOTALL)
+            if thinking_match:
+                final_answer = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL).strip()
+                with st.expander("🌌 Thinking Process...", expanded=False):
+                    st.markdown(f"*{thinking_match.group(1).strip()}*")
+                st.markdown(final_answer)
+            else:
+                st.markdown(text)
         else:
-            st.error("कृपया क्लाइंट का नाम और रकम भरें।")
+            st.markdown(msg["content"])
+
+# 8. Text Input Logic
+prompt = st.chat_input("या कमांड यहाँ टाइप करें...")
+
+# 🗣️ Voice Input with "Hello FC" Wake Word Logic
+if audio_bytes:
+    with st.spinner("आवाज़ समझ रहा हूँ..."):
+        with open("temp_audio.wav", "wb") as f:
+            f.write(audio_bytes)
+        r = sr.Recognizer()
+        with sr.AudioFile("temp_audio.wav") as source:
+            audio_data = r.record(source)
+            try:
+                raw_voice_text = r.recognize_google(audio_data, language="hi-IN")
+                text_lower = raw_voice_text.lower()
+                
+                # चेक करें कि वाक्य में 'hello fc' या उससे मिलते-जुलते शब्द हैं या नहीं
+                wake_words = ["hello fc", "हेलो एफसी", "hello f c", "हेलो fc", "हेलो फर्स्ट चॉइस", "hello first choice"]
+                
+                is_wake_word_detected = False
+                for ww in wake_words:
+                    if ww in text_lower:
+                        is_wake_word_detected = True
+                        # 'Hello FC' को हटाकर असली कमांड निकालना
+                        prompt = text_lower.replace(ww, "").strip()
+                        break
+                
+                if is_wake_word_detected:
+                    if prompt == "":
+                        prompt = "जी बॉस, बताइए मैं फर्स्टचॉइस इन्फ्रा के लिए क्या कर सकता हूँ?"
+                    st.success(f"✅ Wake Word Detected: {prompt}")
+                else:
+                    st.warning(f"⚠️ सिस्टम ने आपको इग्नोर कर दिया। आपने कहा: '{raw_voice_text}' (कमांड से पहले 'Hello FC' बोलना ज़रूरी है!)")
+                    prompt = None # कमांड आगे नहीं जाएगी
+                    
+            except:
+                st.error("माफ़ करें, आवाज़ साफ़ नहीं आई। कृपया दोबारा बोलें।")
+
+# 9. AI Processing, Internet Search & Voice Output
+if prompt:
+    current_messages.append({"role": "user", "content": prompt})
+    save_memory(st.session_state.history_list)
+    
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("🌍 जानकारी प्रोसेस कर रहा हूँ..."):
+            try:
+                # 🌐 लाइव इंटरनेट सर्च
+                live_data = get_live_information(prompt)
+                
+                final_prompt = prompt
+                if live_data:
+                    final_prompt = f"यूज़र का सवाल: {prompt}\n\nलाइव इंटरनेट डेटा:\n{live_data}\n\nइस ताज़ा इंटरनेट डेटा का इस्तेमाल करके यूज़र को सबसे सटीक जवाब दो।"
+
+                if uploaded_file is not None:
+                    img = Image.open(uploaded_file)
+                    response = model.generate_content([final_prompt, img])
+                else:
+                    gemini_history = [{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]
+                    chat_session = model.start_chat(history=gemini_history)
+                    response = chat_session.send_message(final_prompt)
+                
+                response_text = response.text
+                
+                # UI Display
+                thinking_match = re.search(r'<thinking>(.*?)</thinking>', response_text, re.DOTALL)
+                final_answer = response_text
+                if thinking_match:
+                    final_answer = re.sub(r'<thinking>.*?</thinking>', '', response_text, flags=re.DOTALL).strip()
+                    with st.expander("🌌 Thinking Process...", expanded=False):
+                        st.markdown(f"*{thinking_match.group(1).strip()}*")
+                st.markdown(final_answer)
+                
+                # 🔊 TEXT TO SPEECH (आवाज़ में जवाब)
+                clean_text_for_voice = re.sub(r'```.*?```', 'मैंने स्क्रीन पर डिटेल्स जनरेट कर दी हैं।', final_answer, flags=re.DOTALL)
+                clean_text_for_voice = re.sub(r'[*#_]', '', clean_text_for_voice)
+                
+                if clean_text_for_voice.strip():
+                    tts = gTTS(text=clean_text_for_voice, lang='hi')
+                    tts.save("reply.mp3")
+                    st.audio("reply.mp3", format="audio/mp3", autoplay=True)
+                
+                current_messages.append({"role": "assistant", "content": response_text})
+                save_memory(st.session_state.history_list)
+                
+            except Exception as e:
+                st.error(f"⚠️ सिस्टम एरर: {e}")
