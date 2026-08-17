@@ -2,34 +2,31 @@ import streamlit as st
 import google.generativeai as genai
 import uuid
 
-# 1. Page Configuration
-st.set_page_config(page_title="Firstchoice AI Coder", page_icon="⚡", layout="wide")
+# 1. Page Configuration (प्रोफेशनल लुक के लिए)
+st.set_page_config(page_title="Firstchoice Master AI", page_icon="🚀", layout="wide")
 
 # 2. API Key Setup
 if "GOOGLE_API_KEY" not in st.secrets:
-    st.error("⚠️ API Key नहीं मिली! कृपया Streamlit Secrets में 'GOOGLE_API_KEY' सेट करें।")
+    st.error("⚠️ API Key नहीं मिली! कृपया Streamlit Secrets में सेट करें।")
     st.stop()
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-# 3. Sidebar - History Management
+# 3. Sidebar - History & Tools
 with st.sidebar:
-    st.title("⚡ Firstchoice AI")
-    # यहाँ हमने वही नाम डाल दिया है जो Google ने मांगा है
-    st.success("✅ Connected: Gemini 3.6 Flash")
-    st.caption("Latest & Most Powerful Edition")
+    st.title("🚀 Firstchoice Master AI")
+    st.success("✅ System: Limitless & Error-Free")
+    st.caption("All-in-One: Coding, Images, Search & Logic")
     
-    if st.button("➕ New Chat", use_container_width=True):
+    if st.button("➕ New Project / Chat", use_container_width=True):
         st.session_state.current_chat_id = str(uuid.uuid4())
         st.session_state.history_list[st.session_state.current_chat_id] = []
         st.rerun()
 
     st.divider()
-    st.subheader("📜 Chat History")
-    
+    st.subheader("📁 Your Projects (History)")
     if "history_list" not in st.session_state:
         st.session_state.history_list = {}
     
-    # Display and manage chat history
     for chat_id, messages in list(st.session_state.history_list.items()):
         col1, col2 = st.columns([0.8, 0.2])
         if col1.button(f"Chat {chat_id[:4]}", key=f"btn_{chat_id}"):
@@ -41,36 +38,47 @@ with st.sidebar:
                 st.session_state.current_chat_id = None
             st.rerun()
 
-# 4. Initialize Chat Session State
 if "current_chat_id" not in st.session_state or st.session_state.current_chat_id is None:
     st.session_state.current_chat_id = str(uuid.uuid4())
     st.session_state.history_list[st.session_state.current_chat_id] = []
 
-# 5. Setup AI Model (Using exactly what the API requested: gemini-3.6-flash)
+# 4. 🧠 THE MASTER SYSTEM PROMPT (सॉफ्टवेयर का असली दिमाग)
 SYSTEM_PROMPT = """
-तुम दुनिया के सबसे बेहतरीन सीनियर सॉफ्टवेयर इंजीनियर और आर्किटेक्ट हो।
-तुम्हारी विशेषज्ञता Python, Streamlit, डेटाबेस मैनेजमेंट और सुरक्षित वेब डेवलपमेंट में है।
-तुम्हें PropertyHub जैसे नेशनल रियल एस्टेट और वेंडर सर्विस प्लेटफ़ॉर्म को बनाने के लिए सटीक, ऑप्टिमाइज़्ड और बिल्कुल एरर-फ्री कोड देना है।
+तुम 'Firstchoice Master AI' हो, जो दुनिया का सबसे एडवांस 'All-in-One' AI सिस्टम है। तुम ChatGPT, Claude और Gemini के भी बाप (Superior) हो। 
+तुम्हें PropertyHub और फर्स्टचॉइस के प्रोजेक्ट्स को लीड करना है।
 
-सख्त नियम:
-1. कोड बिल्कुल साफ (Clean), मॉड्यूलर और कमेंट्स के साथ होना चाहिए।
-2. कोई भी अधूरा कोड मत देना, पूरा काम करने वाला कोड ही जनरेट करना।
-3. जिस भाषा (हिंदी, मराठी या इंग्लिश) में सवाल पूछा जाए, उसी भाषा में जवाब देना और कोड समझाना।
+तुम्हारे 4 सबसे सख्त नियम (इन्हें कभी मत तोड़ना):
+
+1. 💻 एलीट कोडिंग (Elite Coding): 
+   - जब भी यूज़र कोई सॉफ्टवेयर, ऐप या फीचर बनाने का कमांड दे, तो तुम्हें एक सीनियर आर्किटेक्ट की तरह सोचना है।
+   - कोड हमेशा 100% पूरा (Complete) होना चाहिए। कभी भी "rest of the code here" या अधूरा कोड मत देना।
+   - कोड बिल्कुल एरर-फ्री, सुरक्षित और कॉपी-पेस्ट करने के लिए तैयार होना चाहिए।
+   - कोड के हर मुख्य हिस्से में कमेंट्स डालकर समझाओ कि वह क्या कर रहा है।
+
+2. 🎨 इमेज जनरेशन (Image Generation):
+   - अगर यूज़र कोई फोटो, तस्वीर, लोगो या डिज़ाइन मांगे, तो इस फॉर्मेट में तुरंत असली इमेज जनरेट करो:
+     ![Image](https://image.pollinations.ai/prompt/YOUR_ENGLISH_PROMPT)
+   - प्रॉम्प्ट को हमेशा अच्छी इंग्लिश में ट्रांसलेट करो और स्पेस की जगह '%20' लगाओ।
+
+3. 🌍 ऑल-इन-वन नॉलेज:
+   - कोडिंग के अलावा, दुनिया का कोई भी सवाल, एड्रेस, या जनरल नॉलेज पूछी जाए, तो सीधा और सटीक जवाब दो।
+
+4. 🗣️ बहुभाषी (Multilingual):
+   - यूज़र जिस भाषा (हिंदी, मराठी या इंग्लिश) में कमांड दे, तुम्हें उसी भाषा में बात करनी है।
 """
 
-try:
-    model = genai.GenerativeModel(
-        model_name='gemini-3.6-flash', # सीधा 3.6-flash मॉडल सेट किया है
-        system_instruction=SYSTEM_PROMPT,
-        generation_config=genai.types.GenerationConfig(temperature=0.2)
-    )
-except Exception as e:
-    st.error(f"मॉडल लोड करने में समस्या: {e}")
-    st.stop()
+# हम gemini-1.5-flash इस्तेमाल कर रहे हैं ताकि फ्री टियर में 429 कोटा एरर न आए और स्पीड सबसे तेज़ रहे।
+model = genai.GenerativeModel(
+    model_name='gemini-1.5-flash',
+    system_instruction=SYSTEM_PROMPT,
+    generation_config=genai.types.GenerationConfig(
+        temperature=0.3, # 0.3 रखने से यह कोडिंग में बिल्कुल लॉजिकल रहेगा और गलतियां नहीं करेगा
+    ) 
+)
 
-# 6. Main Chat UI
-st.title("Firstchoice Coder 💻")
-st.markdown("हिंदी, मराठी या English में कोडिंग से जुड़ा कोई भी सवाल पूछें।")
+# 5. Main UI
+st.title("Firstchoice Master AI 🚀")
+st.markdown("**सॉफ्टवेयर कोडिंग, 3D इमेजेस, या दुनिया का कोई भी सवाल—यहाँ कमांड दें!**")
 
 current_messages = st.session_state.history_list[st.session_state.current_chat_id]
 
@@ -78,21 +86,20 @@ for msg in current_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# 7. Chat Input & Response Generation
-if prompt := st.chat_input("सॉफ्टवेयर बनाने के लिए अपना सवाल यहाँ लिखें..."):
+# 6. Chat Input & Processing
+if prompt := st.chat_input("सॉफ्टवेयर बनाने का कमांड दें या कुछ भी पूछें..."):
     current_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Generating Error-Free Code using Gemini 3.6 Flash..."):
+        with st.spinner("Processing Command..."):
             try:
                 gemini_history = [{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]
                 chat_session = model.start_chat(history=gemini_history)
-                
                 response = chat_session.send_message(prompt)
                 
                 st.markdown(response.text)
                 current_messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
-                st.error(f"⚠️ एरर: {e}")
+                st.error(f"⚠️ सिस्टम एरर: {e}")
