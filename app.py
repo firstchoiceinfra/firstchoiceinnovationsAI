@@ -1,6 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-import uuid, re, json, os, io
+import uuid, json, os
 from PIL import Image
 from audio_recorder_streamlit import audio_recorder
 import speech_recognition as sr
@@ -125,17 +125,22 @@ with col2:
 prompt = st.chat_input("J.A.R.V.I.S. से कहें...")
 
 # ==========================================
-# 8. FAST VOICE PROCESSING (NOISE CANCELING)
+# 8. ROBUST VOICE PROCESSING (Mobile Safe)
 # ==========================================
 voice_prompt = None
 if audio_bytes:
-    with st.spinner("प्रोसेस कर रहा हूँ..."):
-        audio_file = io.BytesIO(audio_bytes)
-        r = sr.Recognizer()
-        with sr.AudioFile(audio_file) as source:
-            r.adjust_for_ambient_noise(source, duration=0.2)
-            try:
+    with st.spinner("🎤 आवाज़ को डिकोड कर रहा हूँ..."):
+        try:
+            # मोबाइल के लिए सबसे सुरक्षित तरीका: फाइल सेव करके प्रोसेस करना
+            with open("temp_voice.wav", "wb") as f:
+                f.write(audio_bytes)
+            
+            r = sr.Recognizer()
+            with sr.AudioFile("temp_voice.wav") as source:
+                r.adjust_for_ambient_noise(source, duration=0.2)
                 audio_data = r.record(source)
+                
+                # आवाज़ को टेक्स्ट में बदलना
                 raw_text = r.recognize_google(audio_data, language="hi-IN")
                 
                 # Smart Corrections
@@ -151,10 +156,11 @@ if audio_bytes:
                         
                 voice_prompt = corrected_text
                 st.success(f"🗣️ आपने कहा: {voice_prompt}") 
-            except sr.UnknownValueError:
-                st.error("⚠️ आवाज़ समझ नहीं आई। कृपया दोबारा बोलें।")
-            except Exception:
-                st.error("⚠️ ऑडियो प्रोसेस करने में एरर आया।")
+                
+        except sr.UnknownValueError:
+            st.warning("⚠️ मुझे कुछ सुनाई नहीं दिया। कृपया माइक के पास थोड़ा तेज़ और साफ़ बोलें।")
+        except Exception as e:
+            st.error(f"⚠️ सिस्टम एरर: {e} - कृपया अपने ब्राउज़र (Chrome) में माइक की 'Permission' चेक करें।")
 
 final_prompt = prompt if prompt else voice_prompt
 
