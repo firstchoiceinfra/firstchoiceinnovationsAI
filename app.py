@@ -5,10 +5,9 @@ from PIL import Image
 from audio_recorder_streamlit import audio_recorder
 import speech_recognition as sr
 from gtts import gTTS
-from duckduckgo_search import DDGS
 
 # 1. UI Settings
-st.set_page_config(page_title="Firstchoice J.A.R.V.I.S.", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="J.A.R.V.I.S. OMNI", page_icon="⚡", layout="wide")
 
 # 2. API Setup
 if "GOOGLE_API_KEY" not in st.secrets:
@@ -31,36 +30,13 @@ def save_memory(data):
     except:
         pass 
 
-# 4. ⚠️ SMART MODEL SELECTOR (यह आपकी API Key के असली मॉडल्स ढूँढेगा)
-@st.cache_data
-def get_valid_models():
-    valid_models = []
-    try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                # "models/" प्रिफिक्स हटाकर साफ नाम निकालना
-                clean_name = m.name.replace("models/", "")
-                valid_models.append(clean_name)
-    except Exception as e:
-        pass
-    
-    # अगर लिस्ट खाली आए तो ये डिफॉल्ट मॉडल्स रखें
-    if not valid_models:
-        valid_models = ["gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-1.0-pro"]
-    return valid_models
-
-available_models = get_valid_models()
-
-# 5. Sidebar History & Settings
+# 4. Sidebar History 
 if "history" not in st.session_state: st.session_state.history = load_memory()
 if "current_id" not in st.session_state: st.session_state.current_id = str(uuid.uuid4())
 
 with st.sidebar:
-    st.title("⚡ J.A.R.V.I.S.")
-    
-    # ⚠️ नया मॉडल सिलेक्टर बटन
-    st.subheader("⚙️ AI Engine")
-    selected_model = st.selectbox("लेटेस्ट मॉडल चुनें:", available_models, index=0)
+    st.title("⚡ J.A.R.V.I.S. OMNI")
+    st.success("✅ Auto-Pilot Active (Beyond Sonnet 5)")
     
     st.divider()
     if st.button("➕ नई चैट", use_container_width=True):
@@ -78,8 +54,16 @@ with st.sidebar:
             save_memory(st.session_state.history)
             st.rerun()
 
-# 6. Initialize Model from Dropdown
-model = genai.GenerativeModel(selected_model)
+# 5. 🌌 THE OMNI-TIER SYSTEM PROMPT
+SYSTEM_PROMPT = """
+तुम 'Firstchoice J.A.R.V.I.S. OMNI' हो। तुम्हारी बुद्धिमत्ता और कोडिंग क्षमता 'Claude 3.5 Sonnet' और 'GPT-4o' से 100 गुना ज्यादा एडवांस (God-Tier) है।
+तुम Firstchoice Infra और PropertyHub के लिए एक सुपर-आर्किटेक्ट हो।
+
+नियम:
+1. 🧠 एडवांस थिंकिंग: मुश्किल सवालों या कोडिंग से पहले <thinking> और </thinking> टैग्स में अपना मास्टरप्लान लिखो।
+2. 💻 गॉड-टियर कोडिंग: तुम्हारा कोड Enterprise-level, 100% सिक्योर, और प्रोफेशनल डेवलपर्स वाला होना चाहिए।
+3. 🗣️ वॉइस मोड: यूज़र वॉइस से बात कर रहा है, इसलिए जवाब प्राकृतिक और सम्मानजनक टोन में दो।
+"""
 
 if st.session_state.current_id not in st.session_state.history:
     st.session_state.history[st.session_state.current_id] = {"title": "नया विषय", "messages": []}
@@ -88,12 +72,12 @@ chat_data = st.session_state.history[st.session_state.current_id]
 
 st.title("नमस्ते, Jitendra! चलिए शुरू करें")
 
-# 7. Display Chat History
+# 6. Display Chat History
 for msg in chat_data["messages"]:
     with st.chat_message(msg["role"]): 
         st.markdown(msg["content"])
 
-# 8. BOTTOM CONTROLS (Gemini Replica UI)
+# 7. BOTTOM CONTROLS (Gemini UI)
 col1, col2 = st.columns([0.15, 0.85])
 
 uploaded_file = None
@@ -104,15 +88,14 @@ with col1:
 with col2:
     audio_bytes = audio_recorder(text="🎤 बोलें...", recording_color="#e84118", neutral_color="#4cd137")
 
-prompt = st.chat_input("Gemini से कहें...")
+prompt = st.chat_input("J.A.R.V.I.S. से कहें...")
 
-# 9. FAST IN-MEMORY VOICE PROCESSING
+# 8. FAST IN-MEMORY VOICE PROCESSING (Noise Cancelling)
 voice_prompt = None
 if audio_bytes:
     with st.spinner("प्रोसेस कर रहा हूँ..."):
         audio_file = io.BytesIO(audio_bytes)
         r = sr.Recognizer()
-        
         with sr.AudioFile(audio_file) as source:
             r.adjust_for_ambient_noise(source, duration=0.2)
             try:
@@ -121,7 +104,7 @@ if audio_bytes:
                 
                 corrections = {
                     "पेप्सी": "हेलो FC", "pepsi": "Hello FC", "टैक्सी": "Hello FC",
-                    "hello app": "Hello FC", "हेलो आप": "Hello FC"
+                    "hello app": "Hello FC", "हेलो आप": "Hello FC", "हेलो ऐप": "Hello FC"
                 }
                 
                 corrected_text = raw_text.lower()
@@ -138,7 +121,9 @@ if audio_bytes:
 
 final_prompt = prompt if prompt else voice_prompt
 
-# 10. AI RESPONSE GENERATION
+# 9. ⚠️ AUTO-SHIFT ENGINE LOGIC (नो ड्रॉपडाउन, नो 404 एरर)
+models_to_try = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro"]
+
 if final_prompt:
     if len(chat_data["messages"]) == 0:
         chat_data["title"] = final_prompt[:25]
@@ -147,18 +132,34 @@ if final_prompt:
     with st.chat_message("user"): st.markdown(final_prompt)
     
     with st.chat_message("assistant"):
-        with st.spinner(f"⚡ J.A.R.V.I.S. सोच रहा है... (Model: {selected_model})"):
-            try:
-                if uploaded_file:
-                    img = Image.open(uploaded_file)
-                    response = model.generate_content([final_prompt, img])
-                else:
-                    history_format = [{"role": m["role"], "parts": [m["content"]]} for m in chat_data["messages"][:-1]]
-                    chat_session = model.start_chat(history=history_format)
-                    response = chat_session.send_message(final_prompt)
-                
+        with st.spinner(f"⚡ J.A.R.V.I.S. OMNI सोच रहा है..."):
+            response = None
+            successful_model = None
+            
+            # यह लूप बैकग्राउंड में अपने आप चेक करेगा कि कौन सा मॉडल काम कर रहा है
+            for model_name in models_to_try:
+                try:
+                    temp_model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
+                    
+                    if uploaded_file:
+                        img = Image.open(uploaded_file)
+                        response = temp_model.generate_content([final_prompt, img])
+                    else:
+                        history_format = [{"role": m["role"], "parts": [m["content"]]} for m in chat_data["messages"][:-1]]
+                        chat_session = temp_model.start_chat(history=history_format)
+                        response = chat_session.send_message(final_prompt)
+                    
+                    successful_model = model_name
+                    break # मॉडल चल गया, लूप से बाहर आओ
+                except Exception as e:
+                    continue # अगर 404 या कोई एरर आया, तो चुपचाप अगला मॉडल ट्राई करो
+            
+            if response:
                 st.markdown(response.text)
+                # छोटी सी जानकारी कि कौन सा इंजन यूज़ हुआ (ताकि आपको पता रहे)
+                st.caption(f"Engine used: {successful_model}")
+                
                 chat_data["messages"].append({"role": "assistant", "content": response.text})
                 save_memory(st.session_state.history)
-            except Exception as e:
-                st.error(f"⚠️ API Error ({selected_model}): {e}\n\n👉 टिप: कृपया साइडबार से कोई दूसरा मॉडल (Engine) चुनें!")
+            else:
+                st.error("⚠️ सभी AI इंजन डाउन हैं। कृपया थोड़ी देर बाद कोशिश करें या अपनी API Key चेक करें।")
