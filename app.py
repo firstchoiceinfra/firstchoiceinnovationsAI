@@ -1,75 +1,67 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Claude जैसा प्रोफेशनल और वाइड (Wide) डिज़ाइन
+# 1. Claude जैसा प्रोफेशनल डिज़ाइन
 st.set_page_config(page_title="Firstchoice AI Coder", page_icon="⚡", layout="wide")
 
-# 2. Sidebar (साइडबार) - बिल्कुल Claude की तरह अरेंज्ड
+# 2. Sidebar - अरेंज्ड और व्यवस्थित
 with st.sidebar:
     st.title("⚡ Firstchoice AI")
-    st.caption("Limitless Coding Edition")
+    st.caption("Multilingual Coding Edition (HI/EN/MR)")
     
-    # 'New Chat' बटन (पुरानी चैट क्लियर करने के लिए)
     if st.button("➕ New Chat", use_container_width=True):
         st.session_state.messages = []
         st.session_state.chat_session = None
         st.rerun()
         
     st.divider()
-    st.success("🟢 Status: No Limits")
-    st.info("System: यह AI खास तौर पर PropertyHub जैसे बड़े सॉफ्टवेयर और रियल एस्टेट प्लेटफॉर्म्स की कोडिंग के लिए कस्टमाइज़ किया गया है।")
+    st.info("💡 मैं आपकी भाषा समझता हूँ! सवाल हिंदी, मराठी या इंग्लिश में पूछें।")
 
-# मुख्य स्क्रीन का टाइटल
 st.title("मैं आपकी क्या मदद कर सकता हूँ?")
 
-# 3. API और सिक्योरिटी सेटअप
+# 3. API सेटअप
 if "GOOGLE_API_KEY" not in st.secrets:
-    st.error("⚠️ Streamlit Secrets में GOOGLE_API_KEY नहीं है!")
+    st.error("⚠️ API Key मिसिंग है!")
     st.stop()
 
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-# AI को 'सीनियर डेवलपर' बनाने का निर्देश
+# 4. Multilingual System Prompt
 SYSTEM_PROMPT = """
-तुम दुनिया के सबसे बेहतरीन सॉफ्टवेयर आर्किटेक्ट और Python कोडर हो।
-तुम्हें बिल्कुल Claude 3.5 Sonnet जैसी लॉजिकल और एरर-फ्री कोडिंग करनी है।
-यूज़र PropertyHub नाम का एक नेशनल रियल एस्टेट प्लेटफ़ॉर्म बना रहा है। फालतू बातें मत करना, सीधा और सटीक कोड देना।
+तुम दुनिया के सबसे बेहतरीन सॉफ्टवेयर आर्किटेक्ट हो। 
+तुम्हारी सबसे बड़ी खूबी यह है कि तुम यूज़र की भाषा (हिंदी, मराठी या इंग्लिश) को तुरंत पहचान लेते हो। 
+जिस भाषा में यूज़र सवाल पूछे, तुम्हें उसी भाषा में कोडिंग और तकनीकी जवाब देना है। 
+अगर यूज़र मराठी में पूछे, तो मराठी में जवाब दो। हिंदी में पूछे तो हिंदी में, और इंग्लिश में पूछे तो इंग्लिश में। 
+सिर्फ सटीक कोड और समाधान दो, फालतू बातें मत करना।
 """
 
-# लेटेस्ट और सबसे पावरफुल मॉडल
 model = genai.GenerativeModel(
     model_name='gemini-1.5-pro',
     system_instruction=SYSTEM_PROMPT
 )
 
-# 4. Session State (AI की याददाश्त)
+# 5. Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_session" not in st.session_state or st.session_state.chat_session is None:
     st.session_state.chat_session = model.start_chat(history=[])
 
-# 5. स्क्रीन पर पुरानी बातचीत को व्यवस्थित तरीके से दिखाना
+# 6. Chat Display
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# 6. चैट इनपुट बॉक्स
-if prompt := st.chat_input("Claude की तरह अपना कोडिंग का सवाल यहाँ पूछें..."):
-    
-    # यूज़र का सवाल स्क्रीन पर दिखाएं
+# 7. Chat Input
+if prompt := st.chat_input("अपना सवाल यहाँ लिखें (Type your question here)..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # AI का जवाब जनरेट करें
     with st.chat_message("assistant"):
         try:
-            # लोडिंग इफ़ेक्ट के साथ जवाब लाना
-            with st.spinner("Generating perfect code..."):
+            with st.spinner("Generating answer..."):
                 response = st.session_state.chat_session.send_message(prompt)
                 st.markdown(response.text)
-                
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            st.error(f"❌ सर्वर एरर: {e}")
-            st.info("सुझाव: अगर फिर से एरर आए, तो साइडबार से 'New Chat' पर क्लिक करें।")
+            st.error(f"Error: {e}")
