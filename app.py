@@ -11,45 +11,25 @@ if "GOOGLE_API_KEY" not in st.secrets:
     st.stop()
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
-# 3. Dynamic Model Fetching (यह खुद Google से उपलब्ध मॉडल की लिस्ट लाएगा)
-@st.cache_data(ttl=3600)
-def get_available_models():
-    try:
-        models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                # 'models/' वाले हिस्से को हटाकर सिर्फ नाम लेना
-                name = m.name.replace('models/', '')
-                models.append(name)
-        return models
-    except Exception as e:
-        return []
-
-available_models = get_available_models()
-
-if not available_models:
-    st.error("❌ आपकी API Key से कोई भी मॉडल कनेक्ट नहीं हो पा रहा है। कृपया नई API Key बनाएं।")
-    st.stop()
-
-# 4. Sidebar - History Management & Model Selector
+# 3. Sidebar - History Management
 with st.sidebar:
     st.title("⚡ Firstchoice AI")
-    st.caption("Advanced Auto-Detect Edition")
+    # यहाँ हमने वही नाम डाल दिया है जो Google ने मांगा है
+    st.success("✅ Connected: Gemini 3.6 Flash")
+    st.caption("Latest & Most Powerful Edition")
     
-    # ड्रॉपडाउन - जो मॉडल उपलब्ध है, वही दिखेगा!
-    selected_model = st.selectbox("🤖 अपना AI मॉडल चुनें:", available_models)
-    st.success(f"✅ Ready: {selected_model}")
-    
-    st.divider()
     if st.button("➕ New Chat", use_container_width=True):
         st.session_state.current_chat_id = str(uuid.uuid4())
         st.session_state.history_list[st.session_state.current_chat_id] = []
         st.rerun()
 
+    st.divider()
     st.subheader("📜 Chat History")
+    
     if "history_list" not in st.session_state:
         st.session_state.history_list = {}
     
+    # Display and manage chat history
     for chat_id, messages in list(st.session_state.history_list.items()):
         col1, col2 = st.columns([0.8, 0.2])
         if col1.button(f"Chat {chat_id[:4]}", key=f"btn_{chat_id}"):
@@ -61,21 +41,26 @@ with st.sidebar:
                 st.session_state.current_chat_id = None
             st.rerun()
 
-# 5. Initialize Chat Session State
+# 4. Initialize Chat Session State
 if "current_chat_id" not in st.session_state or st.session_state.current_chat_id is None:
     st.session_state.current_chat_id = str(uuid.uuid4())
     st.session_state.history_list[st.session_state.current_chat_id] = []
 
-# 6. Setup AI Model (ड्रॉपडाउन से चुना गया मॉडल)
+# 5. Setup AI Model (Using exactly what the API requested: gemini-3.6-flash)
 SYSTEM_PROMPT = """
 तुम दुनिया के सबसे बेहतरीन सीनियर सॉफ्टवेयर इंजीनियर और आर्किटेक्ट हो।
+तुम्हारी विशेषज्ञता Python, Streamlit, डेटाबेस मैनेजमेंट और सुरक्षित वेब डेवलपमेंट में है।
 तुम्हें PropertyHub जैसे नेशनल रियल एस्टेट और वेंडर सर्विस प्लेटफ़ॉर्म को बनाने के लिए सटीक, ऑप्टिमाइज़्ड और बिल्कुल एरर-फ्री कोड देना है।
-जिस भाषा (हिंदी, मराठी या इंग्लिश) में सवाल पूछा जाए, उसी भाषा में जवाब देना और कोड समझाना।
+
+सख्त नियम:
+1. कोड बिल्कुल साफ (Clean), मॉड्यूलर और कमेंट्स के साथ होना चाहिए।
+2. कोई भी अधूरा कोड मत देना, पूरा काम करने वाला कोड ही जनरेट करना।
+3. जिस भाषा (हिंदी, मराठी या इंग्लिश) में सवाल पूछा जाए, उसी भाषा में जवाब देना और कोड समझाना।
 """
 
 try:
     model = genai.GenerativeModel(
-        model_name=selected_model,
+        model_name='gemini-3.6-flash', # सीधा 3.6-flash मॉडल सेट किया है
         system_instruction=SYSTEM_PROMPT,
         generation_config=genai.types.GenerationConfig(temperature=0.2)
     )
@@ -83,8 +68,9 @@ except Exception as e:
     st.error(f"मॉडल लोड करने में समस्या: {e}")
     st.stop()
 
-# 7. Main Chat UI
+# 6. Main Chat UI
 st.title("Firstchoice Coder 💻")
+st.markdown("हिंदी, मराठी या English में कोडिंग से जुड़ा कोई भी सवाल पूछें।")
 
 current_messages = st.session_state.history_list[st.session_state.current_chat_id]
 
@@ -92,14 +78,14 @@ for msg in current_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# 8. Chat Input
+# 7. Chat Input & Response Generation
 if prompt := st.chat_input("सॉफ्टवेयर बनाने के लिए अपना सवाल यहाँ लिखें..."):
     current_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner(f"Generating Code using {selected_model}..."):
+        with st.spinner("Generating Error-Free Code using Gemini 3.6 Flash..."):
             try:
                 gemini_history = [{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]
                 chat_session = model.start_chat(history=gemini_history)
@@ -110,4 +96,3 @@ if prompt := st.chat_input("सॉफ्टवेयर बनाने के �
                 current_messages.append({"role": "assistant", "content": response.text})
             except Exception as e:
                 st.error(f"⚠️ एरर: {e}")
-                st.info("सुझाव: साइडबार में जाकर कोई दूसरा मॉडल (जैसे gemini-1.5-flash-8b या gemini-pro) सिलेक्ट करें और दोबारा पूछें।")
