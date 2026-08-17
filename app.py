@@ -8,7 +8,7 @@ from PIL import Image
 from audio_recorder_streamlit import audio_recorder
 import speech_recognition as sr
 from gtts import gTTS
-from duckduckgo_search import DDGS # 🌐 लाइव इंटरनेट के लिए नया इंजन
+from duckduckgo_search import DDGS 
 
 # 1. Page Configuration
 st.set_page_config(page_title="Global J.A.R.V.I.S.", page_icon="🌍", layout="wide")
@@ -35,7 +35,7 @@ def save_memory(data):
     with open(MEMORY_FILE, "w") as f:
         json.dump(data, f)
 
-# 🌐 4. Live Internet Search Function (दुनिया की जानकारी के लिए)
+# 🌐 4. Live Internet Search Function
 def get_live_information(query):
     try:
         with DDGS() as ddgs:
@@ -55,8 +55,8 @@ with st.sidebar:
     st.markdown("### ⚙️ System Status")
     st.checkbox("🧠 Deep Thinking", value=True, disabled=True)
     st.checkbox("💾 Permanent Memory", value=True, disabled=True)
-    st.checkbox("🎙️ Voice Active", value=True, disabled=True)
-    st.checkbox("🌍 Live Internet", value=True, disabled=True) # नया इंटरनेट फीचर
+    st.checkbox("🎙️ Wake Word: 'Hello FC'", value=True, disabled=True) 
+    st.checkbox("🌍 Live Internet", value=True, disabled=True) 
     
     st.divider()
     if st.button("➕ New Project / Chat", use_container_width=True):
@@ -92,7 +92,7 @@ SYSTEM_PROMPT = """
 तुम्हारे पास PropertyHub के डेवलपमेंट की नॉलेज भी है और दुनिया की हर जानकारी भी।
 
 नियम:
-1. 🌍 पल-भर में जवाब: दुनिया की कोई भी जानकारी पूछी जाए (जैसे आज का मौसम, ताज़ा खबर, इतिहास या साइंस), सीधा और सटीक जवाब दो।
+1. 🌍 पल-भर में जवाब: दुनिया की कोई जानकारी पूछी जाए, सीधा और सटीक जवाब दो।
 2. 🧠 डीप थिंकिंग: मुश्किल सवालों या कोडिंग से पहले <thinking> और </thinking> टैग्स में अपना लॉजिक लिखो।
 3. 💻 फ्लॉलेस कोडिंग: बिना एरर के पूरा कोड दो।
 4. 🗣️ वॉइस मोड: तुम बोलकर जवाब दे रहे हो, इसलिए जवाब नेचुरल और इंसान जैसा दो (ताकि सुनने में अच्छा लगे)।
@@ -107,13 +107,13 @@ model = genai.GenerativeModel(
 
 # 7. Main UI & Inputs
 st.title("J.A.R.V.I.S. Global Intelligence 🌍")
-st.markdown("**दुनिया का कोई भी सवाल पूछें, कोडिंग करवाएं, या आवाज़ से कमांड दें!**")
+st.markdown("**🗣️ 'Hello FC' बोलकर कमांड दें (जैसे: 'Hello FC, आज का मौसम बताओ')**")
 
 col1, col2 = st.columns([1, 1])
 with col1:
-    uploaded_file = st.file_uploader("🖼️ फोटो अपलोड करें (Optional)", type=['png', 'jpg', 'jpeg'])
+    uploaded_file = st.file_uploader("🖼️ फोटो अपलोड करें", type=['png', 'jpg', 'jpeg'])
 with col2:
-    st.markdown("🗣️ **वॉइस कमांड दें:**")
+    st.markdown("🗣️ **माइक पर क्लिक करें:**")
     audio_bytes = audio_recorder(text="क्लिक करें और बोलें...", recording_color="#e84118", neutral_color="#4cd137", icon_size="2x")
 
 current_messages = st.session_state.history_list[st.session_state.current_chat_id]
@@ -135,9 +135,9 @@ for msg in current_messages:
             st.markdown(msg["content"])
 
 # 8. Text Input Logic
-prompt = st.chat_input("दुनिया का कोई भी सवाल यहाँ टाइप करें...")
+prompt = st.chat_input("या कमांड यहाँ टाइप करें...")
 
-# Voice Input Logic
+# 🗣️ Voice Input with "Hello FC" Wake Word Logic
 if audio_bytes:
     with st.spinner("आवाज़ समझ रहा हूँ..."):
         with open("temp_audio.wav", "wb") as f:
@@ -146,8 +146,28 @@ if audio_bytes:
         with sr.AudioFile("temp_audio.wav") as source:
             audio_data = r.record(source)
             try:
-                prompt = r.recognize_google(audio_data, language="hi-IN")
-                st.success(f"🗣️ आपने कहा: {prompt}")
+                raw_voice_text = r.recognize_google(audio_data, language="hi-IN")
+                text_lower = raw_voice_text.lower()
+                
+                # चेक करें कि वाक्य में 'hello fc' या उससे मिलते-जुलते शब्द हैं या नहीं
+                wake_words = ["hello fc", "हेलो एफसी", "hello f c", "हेलो fc", "हेलो फर्स्ट चॉइस", "hello first choice"]
+                
+                is_wake_word_detected = False
+                for ww in wake_words:
+                    if ww in text_lower:
+                        is_wake_word_detected = True
+                        # 'Hello FC' को हटाकर असली कमांड निकालना
+                        prompt = text_lower.replace(ww, "").strip()
+                        break
+                
+                if is_wake_word_detected:
+                    if prompt == "":
+                        prompt = "जी बॉस, बताइए मैं फर्स्टचॉइस इन्फ्रा के लिए क्या कर सकता हूँ?"
+                    st.success(f"✅ Wake Word Detected: {prompt}")
+                else:
+                    st.warning(f"⚠️ सिस्टम ने आपको इग्नोर कर दिया। आपने कहा: '{raw_voice_text}' (कमांड से पहले 'Hello FC' बोलना ज़रूरी है!)")
+                    prompt = None # कमांड आगे नहीं जाएगी
+                    
             except:
                 st.error("माफ़ करें, आवाज़ साफ़ नहीं आई। कृपया दोबारा बोलें।")
 
@@ -160,22 +180,19 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("🌍 पूरी दुनिया से जानकारी खोज रहा हूँ..."):
+        with st.spinner("🌍 जानकारी प्रोसेस कर रहा हूँ..."):
             try:
-                # 🌐 लाइव इंटरनेट सर्च (अगर ज़रूरत हो तो)
+                # 🌐 लाइव इंटरनेट सर्च
                 live_data = get_live_information(prompt)
                 
-                # प्रॉम्प्ट को एडवांस बनाना
                 final_prompt = prompt
                 if live_data:
                     final_prompt = f"यूज़र का सवाल: {prompt}\n\nलाइव इंटरनेट डेटा:\n{live_data}\n\nइस ताज़ा इंटरनेट डेटा का इस्तेमाल करके यूज़र को सबसे सटीक जवाब दो।"
 
-                # विज़न (फोटो) के साथ प्रॉसेसिंग
                 if uploaded_file is not None:
                     img = Image.open(uploaded_file)
                     response = model.generate_content([final_prompt, img])
                 else:
-                    # नॉर्मल चैट
                     gemini_history = [{"role": m["role"], "parts": [m["content"]]} for m in current_messages[:-1]]
                     chat_session = model.start_chat(history=gemini_history)
                     response = chat_session.send_message(final_prompt)
@@ -192,7 +209,7 @@ if prompt:
                 st.markdown(final_answer)
                 
                 # 🔊 TEXT TO SPEECH (आवाज़ में जवाब)
-                clean_text_for_voice = re.sub(r'```.*?```', 'मैंने कोड और विस्तृत जानकारी स्क्रीन पर जनरेट कर दी है।', final_answer, flags=re.DOTALL)
+                clean_text_for_voice = re.sub(r'```.*?```', 'मैंने स्क्रीन पर डिटेल्स जनरेट कर दी हैं।', final_answer, flags=re.DOTALL)
                 clean_text_for_voice = re.sub(r'[*#_]', '', clean_text_for_voice)
                 
                 if clean_text_for_voice.strip():
@@ -200,7 +217,6 @@ if prompt:
                     tts.save("reply.mp3")
                     st.audio("reply.mp3", format="audio/mp3", autoplay=True)
                 
-                # असली जवाब को हिस्ट्री में सेव करना (बिना सर्च डेटा मिलावट के)
                 current_messages.append({"role": "assistant", "content": response_text})
                 save_memory(st.session_state.history_list)
                 
