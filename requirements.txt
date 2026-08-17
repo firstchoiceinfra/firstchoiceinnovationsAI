@@ -5,3 +5,5 @@ audio-recorder-streamlit
 SpeechRecognition
 gTTS
 duckduckgo-search
+fpdf
+pandas
